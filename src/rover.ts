@@ -4,6 +4,13 @@ const canvas = document.querySelector<HTMLCanvasElement>("#rover-canvas")!;
 const ctx = canvas.getContext("2d")!;
 const readout = document.querySelector<HTMLParagraphElement>("#rover-readout")!;
 
+const pendingList = document.querySelector<HTMLOListElement>("#rover-pending")!;
+const runButton = document.querySelector<HTMLButtonElement>("#rover-run")!;
+const clearButton = document.querySelector<HTMLButtonElement>("#rover-clear")!;
+const queueStatus = document.querySelector<HTMLParagraphElement>(
+  "#rover-queue-status",
+)!;
+
 interface directionRecord {
   name: string;
   dx: number;
@@ -42,41 +49,70 @@ class Rover {
 
 //command
 interface Command {
+  label: string;
   execute(rover: Rover): void;
 }
 
 class ForwardCommand implements Command {
+  label = "Forward";
   execute(rover: Rover): void {
     rover.moveForward();
   }
 }
 
 class RightCommand implements Command {
+  label = "Right";
   execute(rover: Rover): void {
     rover.turnRight();
   }
 }
 
-class ResetCommand implements Command {
-  execute(rover: Rover): void {
-    rover.reset();
-  }
-}
+//processor/scheduler
+class RoverScheduler {
+  private queue: Command[] = [];
 
-//invoker
-class RoverExecutor {
-  run(command: Command, rover: Rover): void {
-    command.execute(rover);
+  enqueue(command: Command): void {
+    this.queue.push(command);
+    this.updateUI();
+  }
+
+  runAll(rover: Rover): void {
+    while (this.queue.length > 0) {
+      const command = this.queue.shift()!;
+      command.execute(rover);
+    }
+    this.updateUI();
     drawRover();
+  }
+
+  clear(): void {
+    this.queue = [];
+    this.updateUI();
+  }
+
+  private updateUI(): void {
+    pendingList.innerHTML = "";
+
+    this.queue.forEach((cmd) => {
+      const li = document.createElement("li");
+      li.textContent = cmd.label;
+      pendingList.appendChild(li);
+    });
+
+    if (this.queue.length === 0) {
+      queueStatus.textContent = "Empty";
+      runButton.disabled = true;
+      clearButton.disabled = true;
+    } else {
+      queueStatus.textContent = `${this.queue.length} pending action(s)`;
+      runButton.disabled = false;
+      clearButton.disabled = false;
+    }
   }
 }
 
 const rover = new Rover();
-const executor = new RoverExecutor();
-
-const forwardCmd = new ForwardCommand();
-const rightCmd = new RightCommand();
-const resetCmd = new ResetCommand();
+const scheduler = new RoverScheduler();
 
 function drawRover() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -103,12 +139,23 @@ function drawRover() {
 }
 
 document.querySelector<HTMLButtonElement>("#rover-forward")!.onclick = () => {
-  executor.run(forwardCmd, rover);
+  scheduler.enqueue(new ForwardCommand());
 };
 document.querySelector<HTMLButtonElement>("#rover-right")!.onclick = () => {
-  executor.run(rightCmd, rover);
+  scheduler.enqueue(new RightCommand());
 };
+document.querySelector<HTMLButtonElement>("#rover-run")!.onclick = () => {
+  scheduler.runAll(rover);
+};
+
+document.querySelector<HTMLButtonElement>("#rover-clear")!.onclick = () => {
+  scheduler.clear();
+};
+
 document.querySelector<HTMLButtonElement>("#rover-reset")!.onclick = () => {
-  executor.run(resetCmd, rover);
+  rover.reset();
+  scheduler.clear();
+  drawRover();
 };
 drawRover();
+scheduler.clear();
