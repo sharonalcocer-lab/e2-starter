@@ -1,5 +1,5 @@
 export {};
-
+//couldn't figure out C3
 export interface ShieldSnapshot {
   readonly currentCharge: number;
   readonly capacity: number;
