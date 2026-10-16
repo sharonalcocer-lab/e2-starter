@@ -17,6 +17,16 @@ export function createShieldSnapshot(
   };
 }
 
+interface ShieldChangeEventInit extends CustomEventInit {
+  detail: ShieldSnapshot;
+}
+
+class ShieldChangeEvent extends CustomEvent<ShieldSnapshot> {
+  constructor(eventInitDict: ShieldChangeEventInit) {
+    super("shieldchange", eventInitDict);
+  }
+}
+
 const canvas = document.querySelector<HTMLCanvasElement>("#counter-canvas")!;
 const ctx = canvas.getContext("2d")!;
 const readout = document.querySelector<HTMLParagraphElement>(
@@ -30,6 +40,8 @@ let count = 0;
 const CAPACITY = 10;
 let panel: HTMLParagraphElement | null = null;
 let panelUpdates = 0;
+
+const shieldNotifier = new EventTarget();
 
 function drawMeter(snapshot: ShieldSnapshot) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -60,13 +72,18 @@ function renderStats(snapshot: ShieldSnapshot) {
     `Shield charge: ${snapshot.currentCharge} · Missing charge: ${snapshot.missingCharge}`;
 }
 
+shieldNotifier.addEventListener("shieldchange", (e) => {
+  const customEvent = e as ShieldChangeEvent;
+  drawMeter(customEvent.detail);
+});
+
 function setCount(next: number) {
   const bounded = Math.max(0, Math.min(CAPACITY, next));
   if (bounded === count) return;
   count = bounded;
 
   const snapshot = createShieldSnapshot(count, CAPACITY);
-  drawMeter(snapshot);
+  shieldNotifier.dispatchEvent(new ShieldChangeEvent({ detail: snapshot }));
   if (panel) updateStats(snapshot);
 }
 
@@ -91,4 +108,6 @@ document.querySelector<HTMLButtonElement>("#counter-close")!.onclick = () => {
   panel.remove();
   panel = null;
 };
-drawMeter(createShieldSnapshot(count, CAPACITY));
+shieldNotifier.dispatchEvent(
+  new ShieldChangeEvent({ detail: createShieldSnapshot(count, CAPACITY) }),
+);
