@@ -3,18 +3,30 @@ export {};
 const canvas = document.querySelector<HTMLCanvasElement>("#rover-canvas")!;
 const ctx = canvas.getContext("2d")!;
 const readout = document.querySelector<HTMLParagraphElement>("#rover-readout")!;
-const headings = ["North", "East", "South", "West"];
 
+interface directionRecord {
+  name: string;
+  dx: number;
+  dy: number;
+}
+
+const headings: directionRecord[] = [
+  { name: "North", dx: 0, dy: -1 },
+  { name: "East", dx: 1, dy: 0 },
+  { name: "South", dx: 0, dy: 1 },
+  { name: "West", dx: -1, dy: 0 },
+];
+
+//reciever
 class Rover {
   x = 2;
   y = 2;
   direction = 0;
 
   moveForward() {
-    if (this.direction === 0) this.y = Math.max(0, this.y - 1);
-    if (this.direction === 1) this.x = Math.min(4, this.x + 1);
-    if (this.direction === 2) this.y = Math.min(4, this.y + 1);
-    if (this.direction === 3) this.x = Math.max(0, this.x - 1);
+    const curr = headings[this.direction];
+    this.x = Math.max(0, Math.min(4, this.x + curr.dx));
+    this.y = Math.max(0, Math.min(4, this.y + curr.dy));
   }
 
   turnRight() {
@@ -86,7 +98,7 @@ function drawRover() {
   ctx.fill();
   ctx.restore();
   readout.textContent = `Position: (${rover.x}, ${rover.y}) · Facing: ${
-    headings[rover.direction]
+    headings[rover.direction].name
   }`;
 }
 
