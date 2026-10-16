@@ -15,13 +15,19 @@ const staticTotalConsumption = 6;
 //var
 let activeProducers = defaultProducerCount;
 
-//explicit type
 type ShiftResults = {
   activeCount: number;
   maxCount: number;
   production: number;
   consumption: number;
   balance: number;
+};
+
+type RowRecord = {
+  label: string;
+  value: number;
+  color: string;
+  showStatus: boolean;
 };
 
 function calcShiftData(producers: number): ShiftResults {
@@ -40,7 +46,7 @@ function calcShiftData(producers: number): ShiftResults {
 
 function updateDOM(data: ShiftResults): void {
   const balanceSign = data.balance > 0 ? "+" : "";
-  readout.textContent = `Assigned: ${data.activeCount}/${data.maxCount} ·` +
+  readout.textContent = `Assigned: ${data.activeCount}/${data.maxCount} · ` +
     `Production: ${data.production} · ` +
     `Consumption: ${data.consumption} · ` +
     `Balance: ${balanceSign}${data.balance}`;
@@ -58,16 +64,48 @@ function canvasGraphics(data: ShiftResults): void {
     ctx.fillText(String(i + 1), 31 + i * 45, 40);
   }
 
-  ctx.fillStyle = "#233e43";
-  ctx.font = "14px system-ui";
-  ctx.fillText(`Producers: ${data.activeCount} / ${data.maxCount}`, 18, 76);
-  ctx.fillText(`Production: ${data.production}`, 18, 102);
-  ctx.fillStyle = "#27766b";
-  ctx.fillRect(18, 110, data.production * 14, 20);
-  ctx.fillStyle = "#233e43";
-  ctx.fillText(`Consumption: ${data.consumption}`, 18, 154);
-  ctx.fillStyle = "#a44d23";
-  ctx.fillRect(18, 162, data.consumption * 14, 20);
+  const reportRows: RowRecord[] = [
+    {
+      label: "Producers",
+      value: 0,
+      color: "#233e43",
+      showStatus: true,
+    },
+
+    {
+      label: "Production",
+      value: data.production,
+      color: "#27766b",
+      showStatus: false,
+    },
+
+    {
+      label: "Consumption",
+      value: data.consumption,
+      color: "#a44d23",
+      showStatus: false,
+    },
+  ];
+
+  reportRows.forEach((row, index) => {
+    const currentY = index === 2 ? 154 : 76 + index * 26;
+
+    ctx.fillStyle = "#233e43";
+    ctx.font = "14px system-ui";
+
+    if (row.showStatus) {
+      ctx.fillText(
+        `Producers: ${data.activeCount} / ${data.maxCount}`,
+        18,
+        currentY,
+      );
+    } else {
+      ctx.fillText(`${row.label}: ${row.value}`, 18, currentY);
+      const barY = currentY + 8;
+      ctx.fillStyle = row.color;
+      ctx.fillRect(18, barY, row.value * 14, 20);
+    }
+  });
 }
 
 function ui() {
